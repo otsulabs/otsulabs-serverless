@@ -67,7 +67,7 @@ app.post("/contact", async (req, res, next) => {
         await sendMail(data);
       } catch (error) {
         console.log(error);
-        next(err);
+        res.status(400).send("Fail to send contact");
         return;
       }
       res.json({
@@ -80,9 +80,9 @@ app.post("/contact", async (req, res, next) => {
   }
 });
 
-app.listen(2000, async () => {
+app.listen(3000, async () => {
   await testVercelPostgres();
-  console.log("Server ready on port 2000.");
+  console.log("Server ready on port 3000.");
 });
 
 module.exports = app;
