@@ -67,7 +67,10 @@ app.post("/contact", async (req, res, next) => {
         await sendMail(data);
       } catch (error) {
         console.log(error);
-        res.status(400).send("Fail to send contact");
+        res.status(400).json({
+          success: false,
+          message: "Fail to send contact.",
+        });
         return;
       }
       res.json({
@@ -76,7 +79,10 @@ app.post("/contact", async (req, res, next) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(400).send("Fail to send contact");
+    res.status(400).json({
+      success: false,
+      message: "Fail to send contact.",
+    });
   }
 });
 

@@ -7,8 +7,8 @@ async function seed() {
       name VARCHAR(255) NOT NULL,
       email VARCHAR(255) NOT NULL,
       attachment VARCHAR(255),
-      message VARCHAR(255),
-      type VARCHAR(255) NOT NULL,
+      message TEXT,
+      type VARCHAR(36) NOT NULL,
       "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
     `;
