@@ -5,7 +5,9 @@ const { sql } = require("@vercel/postgres");
 var multiparty = require("multiparty");
 const { testVercelPostgres } = require("../helpers/test-vercel-postgres");
 const { uploadFile, fileToBase64 } = require("../helpers/upload-file-to-vercel");
+const { slackPostMessage } = require("../helpers/slack-integration");
 const { sendMail } = require("../helpers/send-mail");
+const { randomString } = require("../helpers/random-string");
 
 const app = express();
 
@@ -15,7 +17,7 @@ app.post("/contact", async (req, res, next) => {
   try {
     var form = new multiparty.Form();
     form.parse(req, async function (err, fields, files) {
-      if (!fields.name || !fields.email) {
+      if (!fields.name || !fields.name.length || !fields.email || !fields.email.length) {
         res.status(400).json({
           success: false,
           message: "You must fill in your email and name.",
@@ -26,45 +28,68 @@ app.post("/contact", async (req, res, next) => {
         return;
       }
       try {
-        const base64data = await fileToBase64(files.attachment[0]);
-        if (!base64data) {
-          res.status(400).json({
-            success: false,
-            message: "File upload failed.",
-          });
+        let fileUrl = '';
+        let file;
+        let base64data;
+        const message = fields.message ? fields.message[0] : 'There are no messages to display';
+        const name = fields.name[0];
+        const email = fields.email[0];
+        let type = fields.type ? fields.type[0] : 'contact';
+        type = type[0].toUpperCase() + type.slice(1);
+        if (files.attachment && files.attachment.length > 0) {
+          base64data = await fileToBase64(files.attachment[0]);
+          if (!base64data) {
+            res.status(400).json({
+              success: false,
+              message: "File upload failed.",
+            });
+          }
+          file = await uploadFile(files.attachment[0].originalFilename, base64data);
+          if (!file) {
+            res.status(400).json({
+              success: false,
+              message: "File upload failed.",
+            });
+          }
+          fileUrl = file.url
         }
-        const file = await uploadFile(files.attachment[0].originalFilename, base64data);
-        if (!file) {
-          res.status(400).json({
-            success: false,
-            message: "File upload failed.",
-          });
-        }
-        await sql`INSERT INTO contacts (name, email, message, attachment, type) VALUES (${fields.name}, ${fields.email}, ${fields.message || ''}, ${file.url}, ${fields.type || 'contact'});`;
-        const data = {
+        await sql`INSERT INTO contacts (name, email, message, attachment, type) VALUES (${name}, ${email}, ${message || ''}, ${fileUrl}, ${type});`;
+        let presetMail = {
           from: `Otsulabs <${process.env.RESEND_EMAIL_FROM}>`,
           to: [process.env.RESEND_EMAIL_TO],
-          reply_to: fields.email,
-          subject: `New ${fields.type || 'contact'}`,
+          reply_to: email,
+          subject: `New ${type}`,
           html: `
-            <p>Message:</p>
+            <p> From: ${name} </p>
+            <p> Email: ${email} </p>
             <br></br>
-            <span>${fields.message}</span>
+            <span>${message}</span>
           `,
-          attachments: [
-            {
-              filename: file.pathname,
-              content: base64data,
-            },
-          ],
           tags: [
             {
               name: 'category',
-              value: `${fields.type || 'contact'}`,
+              value: type,
             },
           ],
         }
-        await sendMail(data);
+        let presetSlack = {
+          name,
+          type,
+          email,
+          message,
+        }
+        if (fileUrl) {
+          const filename = `${randomString()}-${file.pathname}`
+          presetMail.attachments = [
+            {
+              filename,
+              content: base64data,
+            },
+          ];
+          presetSlack.attachment = fileUrl
+        }
+        sendMail(presetMail);
+        await slackPostMessage(presetSlack);
       } catch (error) {
         console.log(error);
         res.status(400).json({
