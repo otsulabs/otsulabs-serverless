@@ -18,7 +18,7 @@ app.post("/contact", async (req, res, next) => {
     var form = new multiparty.Form();
     form.parse(req, async function (err, fields, files) {
       if (!fields.name || !fields.name.length || !fields.email || !fields.email.length) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: "You must fill in your email and name.",
         });
@@ -27,26 +27,34 @@ app.post("/contact", async (req, res, next) => {
         next(err);
         return;
       }
+      let fileUrl = '';
+      let file;
+      let base64data;
+      const extensionFilters = ['image/jpeg', 'image/jpg', 'application/pdf'];
+      const message = fields.message ? fields.message[0] : 'There are no messages to display';
+      const name = fields.name[0];
+      const email = fields.email[0];
+      let type = fields.type ? fields.type[0] : 'contact';
+      type = type[0].toUpperCase() + type.slice(1);
       try {
-        let fileUrl = '';
-        let file;
-        let base64data;
-        const message = fields.message ? fields.message[0] : 'There are no messages to display';
-        const name = fields.name[0];
-        const email = fields.email[0];
-        let type = fields.type ? fields.type[0] : 'contact';
-        type = type[0].toUpperCase() + type.slice(1);
         if (files.attachment && files.attachment.length > 0) {
-          base64data = await fileToBase64(files.attachment[0]);
+          const fileFromAttachemnt = files.attachment[0];
+          if (fileFromAttachemnt.headers && !extensionFilters.includes(fileFromAttachemnt.headers['content-type'])) {
+            return res.status(400).json({
+              success: false,
+              message: "Please select correct file format(.jpg, png, pdf).",
+            });
+          }
+          base64data = await fileToBase64(fileFromAttachemnt);
           if (!base64data) {
-            res.status(400).json({
+            return res.status(400).json({
               success: false,
               message: "File upload failed.",
             });
           }
-          file = await uploadFile(files.attachment[0].originalFilename, base64data);
+          file = await uploadFile(fileFromAttachemnt.originalFilename, base64data);
           if (!file) {
-            res.status(400).json({
+            return res.status(400).json({
               success: false,
               message: "File upload failed.",
             });
@@ -94,19 +102,19 @@ app.post("/contact", async (req, res, next) => {
         console.log(error);
         res.status(400).json({
           success: false,
-          message: "Fail to send contact.",
+          message: `Fail to send ${type.toLowerCase()}.`,
         });
         return;
       }
-      res.json({
+      return res.json({
         success: true,
       });
     });
   } catch (error) {
     console.error(error);
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
-      message: "Fail to send contact.",
+      message: "Fail to send form.",
     });
   }
 });
