@@ -36,6 +36,12 @@ app.post("/contact", async (req, res, next) => {
       const email = fields.email[0];
       let type = fields.type ? fields.type[0] : 'contact';
       type = type[0].toUpperCase() + type.slice(1);
+      if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please write correct email address.",
+        });
+      }
       try {
         if (files.attachment && files.attachment.length > 0) {
           const fileFromAttachemnt = files.attachment[0];
