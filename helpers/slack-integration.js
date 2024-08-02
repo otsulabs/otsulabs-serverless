@@ -1,9 +1,9 @@
-require("dotenv").config();
-const { WebClient } = require("@slack/web-api");
+require('dotenv').config();
+const { WebClient } = require('@slack/web-api');
 const bot = new WebClient(process.env.SLACK_TOKEN);
 
 async function slackPostMessageWithAttechment(data) {
-  console.log("========================Preset data====================", data)
+  console.log('========================Preset data====================', data)
   try {
     return await bot.files.uploadV2({
       file: data.url,
@@ -26,7 +26,7 @@ async function slackPostMessageWithAttechment(data) {
 }
 
 async function slackPostMessage(data) {
-  console.log("========================Preset Slack data====================", data)
+  console.log('========================Preset Slack data====================', data)
   try {
     return await bot.chat.postMessage({
       channel: process.env.SLACK_CHANNEL,
