@@ -1,26 +1,26 @@
-require("dotenv").config();
-var cors = require("cors");
-const express = require("express");
-const { sql } = require("@vercel/postgres");
-var multiparty = require("multiparty");
-const { testVercelPostgres } = require("../helpers/test-vercel-postgres");
-const { uploadFile, fileToBase64 } = require("../helpers/upload-file-to-vercel");
-const { slackPostMessage } = require("../helpers/slack-integration");
-const { sendMail } = require("../helpers/send-mail");
-const { randomString } = require("../helpers/random-string");
+require('dotenv').config();
+const cors = require('cors');
+const express = require('express');
+const { sql } = require('@vercel/postgres');
+const multiparty = require('multiparty');
+const { testVercelPostgres } = require('../helpers/test-vercel-postgres');
+const { uploadFile, fileToBase64 } = require('../helpers/upload-file-to-vercel');
+const { slackPostMessage } = require('../helpers/slack-integration');
+const { sendMail } = require('../helpers/send-mail');
+const { randomString } = require('../helpers/random-string');
 
 const app = express();
 
 app.use(cors());
 
-app.post("/contact", async (req, res, next) => {
+app.post('/contact', async (req, res, next) => {
   try {
-    var form = new multiparty.Form();
+    const form = new multiparty.Form();
     form.parse(req, async function (err, fields, files) {
       if (!fields.name || !fields.name.length || !fields.email || !fields.email.length) {
         return res.status(400).json({
           success: false,
-          message: "You must fill in your email and name.",
+          message: 'You must fill in your email and name.',
         });
       }
       if (err) {
@@ -39,7 +39,7 @@ app.post("/contact", async (req, res, next) => {
       if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email)) {
         return res.status(400).json({
           success: false,
-          message: "Please write correct email address.",
+          message: 'Please write correct email address.',
         });
       }
       try {
@@ -48,29 +48,30 @@ app.post("/contact", async (req, res, next) => {
           if (fileFromAttachemnt.headers && !extensionFilters.includes(fileFromAttachemnt.headers['content-type'])) {
             return res.status(400).json({
               success: false,
-              message: "Please select correct file format(.jpg, png, pdf).",
+              message: 'Please select correct file format(.jpg, png, pdf).',
             });
           }
           base64data = await fileToBase64(fileFromAttachemnt);
           if (!base64data) {
             return res.status(400).json({
               success: false,
-              message: "File upload failed.",
+              message: 'File upload failed.',
             });
           }
           file = await uploadFile(fileFromAttachemnt.originalFilename, base64data);
           if (!file) {
             return res.status(400).json({
               success: false,
-              message: "File upload failed.",
+              message: 'File upload failed.',
             });
           }
           fileUrl = file.url
         }
         await sql`INSERT INTO contacts (name, email, message, attachment, type) VALUES (${name}, ${email}, ${message || ''}, ${fileUrl}, ${type});`;
+        const sendTo = type === 'contact' ? process.env.RESEND_EMAIL_TO : RESEND_EMAIL_JOIN_TO
         let presetMail = {
           from: `Otsulabs <${process.env.RESEND_EMAIL_FROM}>`,
-          to: [process.env.RESEND_EMAIL_TO],
+          to: [sendTo],
           reply_to: email,
           subject: `New ${type}`,
           html: `
@@ -120,14 +121,14 @@ app.post("/contact", async (req, res, next) => {
     console.error(error);
     return res.status(400).json({
       success: false,
-      message: "Fail to send form.",
+      message: 'Fail to send form.',
     });
   }
 });
 
 app.listen(3000, async () => {
   await testVercelPostgres();
-  console.log("Server ready on port 3000.");
+  console.log('Server ready on port 3000.');
 });
 
 module.exports = app;
