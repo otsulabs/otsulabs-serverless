@@ -68,7 +68,7 @@ app.post('/contact', async (req, res, next) => {
           fileUrl = file.url
         }
         await sql`INSERT INTO contacts (name, email, message, attachment, type) VALUES (${name}, ${email}, ${message || ''}, ${fileUrl}, ${type});`;
-        const sendTo = type === 'contact' ? process.env.RESEND_EMAIL_TO : process.env.RESEND_EMAIL_JOIN_TO
+        const sendTo = (type === 'contact') ? process.env.RESEND_EMAIL_TO : process.env.RESEND_EMAIL_JOIN_TO
         let presetMail = {
           from: `Otsulabs <${process.env.RESEND_EMAIL_FROM}>`,
           to: [sendTo],
