@@ -8,7 +8,7 @@ const { uploadFile, fileToBase64 } = require('../helpers/upload-file-to-vercel')
 const { slackPostMessage } = require('../helpers/slack-integration');
 const { sendMail } = require('../helpers/send-mail');
 const { randomString } = require('../helpers/random-string');
-
+const { addRow } = require('../helpers/google');
 const app = express();
 
 app.use(cors());
@@ -65,10 +65,10 @@ app.post('/contact', async (req, res, next) => {
               message: 'File upload failed.',
             });
           }
-          fileUrl = file.url
+          fileUrl = file.url;
         }
         await sql`INSERT INTO contacts (name, email, message, attachment, type) VALUES (${name}, ${email}, ${message || ''}, ${fileUrl}, ${type});`;
-        const sendTo = (type === 'Contact') ? process.env.RESEND_EMAIL_TO : process.env.RESEND_EMAIL_JOIN_TO
+        const sendTo = (type === 'Contact') ? process.env.RESEND_EMAIL_TO : process.env.RESEND_EMAIL_JOIN_TO;
         let presetMail = {
           from: `Otsulabs <${process.env.RESEND_EMAIL_FROM}>`,
           to: [sendTo],
@@ -92,7 +92,7 @@ app.post('/contact', async (req, res, next) => {
           type,
           email,
           message,
-        }
+        };
         if (fileUrl) {
           const filename = `${randomString()}-${file.pathname}`
           presetMail.attachments = [
@@ -101,10 +101,17 @@ app.post('/contact', async (req, res, next) => {
               content: base64data,
             },
           ];
-          presetSlack.attachment = fileUrl
+          presetSlack.attachment = fileUrl;
         }
         sendMail(presetMail);
         await slackPostMessage(presetSlack);
+        await addRow({
+          Name: name,
+          Email: email,
+          Type: type,
+          Message: message,
+          Attachment: fileUrl
+        });
       } catch (error) {
         console.log(error);
         res.status(400).json({
