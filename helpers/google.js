@@ -18,7 +18,7 @@ const doc = new GoogleSpreadsheet(process.env.SPEARDSHEET_ID || '1nNkrFE4r_kkIce
 const addRow = async (data) => {
   await doc.loadInfo();
   const sheet = doc.sheetsByIndex[0];
-  const data = await sheet.addRow(data);
+  await sheet.addRow(data);
 }
 
 module.exports = { addRow };
